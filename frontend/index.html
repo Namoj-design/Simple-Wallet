@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ethereum Wallet DApp</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.15.0/dist/ethers.umd.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f4f7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+      width: 350px;
+      text-align: center;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      border: none;
+      background-color: #4CAF50;
+      color: white;
+      font-size: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0 15px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    #walletAddress {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    #walletBalance {
+      font-size: 14px;
+      color: #444;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h2>Ethereum Wallet</h2>
+    <button onclick="connectWallet()">Connect Wallet</button>
+    <p id="walletAddress">Not connected</p>
+    <p id="walletBalance">Balance: -</p>
+
+    <h3>Send ETH</h3>
+    <input type="text" id="toAddress" placeholder="Recipient Address" />
+    <input type="text" id="sendAmount" placeholder="Amount in ETH" />
+    <button onclick="sendEther()">Send</button>
+
+    <h3>Withdraw ETH</h3>
+    <input type="text" id="withdrawAmount" placeholder="Amount in ETH" />
+    <button onclick="withdrawEther()">Withdraw</button>
+  </div>
+
+  <script>
+    let provider;
+    let signer;
+    let userAddress;
+
+    async function connectWallet() {
+      try {
+        if (!window.ethereum) {
+          alert("MetaMask is not installed!");
+          return;
+        }
+
+        provider = new ethers.BrowserProvider(window.ethereum);
+        signer = await provider.getSigner();
+        userAddress = await signer.getAddress();
+
+        document.getElementById("walletAddress").innerText = userAddress;
+        console.log("Connected:", userAddress);
+
+        updateBalance();
+        setInterval(updateBalance, 10000); // Refresh every 10s
+
+      } catch (error) {
+        console.error("Connection failed:", error.message);
+      }
+    }
+
+    async function updateBalance() {
+      try {
+        const balance = await provider.getBalance(userAddress);
+        const eth = ethers.formatEther(balance);
+        document.getElementById("walletBalance").innerText = `Balance: ${parseFloat(eth).toFixed(4)} ETH`;
+      } catch (err) {
+        console.error("Error fetching balance:", err);
+      }
+    }
+
+    async function sendEther() {
+      try {
+        const to = document.getElementById("toAddress").value;
+        const amount = document.getElementById("sendAmount").value;
+
+        if (!to || !amount) {
+          alert("Please enter a valid address and amount.");
+          return;
+        }
+
+        const tx = await signer.sendTransaction({
+          to: to,
+          value: ethers.parseEther(amount),
+        });
+
+        await tx.wait();
+        alert(`Sent ${amount} ETH to ${to}`);
+        updateBalance();
+      } catch (error) {
+        console.error("Send failed:", error.message);
+        alert("Transaction failed.");
+      }
+    }
+
+    async function withdrawEther() {
+      try {
+        const amount = document.getElementById("withdrawAmount").value;
+
+        if (!amount) {
+          alert("Please enter an amount to withdraw.");
+          return;
+        }
+
+        const tx = await signer.sendTransaction({
+          to: userAddress,
+          value: ethers.parseEther(amount),
+        });
+
+        await tx.wait();
+        alert(`Withdrawn ${amount} ETH to your own wallet.`);
+        updateBalance();
+      } catch (error) {
+        console.error("Withdraw failed:", error.message);
+        alert("Withdraw failed.");
+      }
+    }
+  </script>
+</body>
+</html>
